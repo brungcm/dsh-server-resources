@@ -1,6 +1,6 @@
 {
   "name": "dsh-server-resources",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Server resources panel for DeepSeek Harness: live CPU, RAM, swap and disk, with rankings of the top processes, folders and files. Read-only, zero dependencies.",
   "author": "brungcm",
   "license": "MIT",
@@ -36,7 +36,8 @@
     "lib",
     "cordis.patch.yml",
     "README.md",
-    "LICENSE"
+    "LICENSE",
+    "docs/images"
   ],
   "scripts": {
     "test": "node --test test/*.test.mjs"

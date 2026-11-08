@@ -32,10 +32,10 @@ test('pid stat: comm with spaces and parentheses', () => {
 })
 
 test('df: skips duplicates and keeps mount points with spaces', () => {
-  const rows = parseDf('Filesystem Type 1-blocks Used Available Capacity Mounted on\n/dev/sda1 ext4 1000 900 100 90% /\n/dev/sda1 ext4 1000 900 100 90% /srv/igos\n/dev/sdb ext4 2000 500 1500 25% /meu disco\n')
+  const rows = parseDf('Filesystem Type 1-blocks Used Available Capacity Mounted on\n/dev/sda1 ext4 1000 900 100 90% /\n/dev/sda1 ext4 1000 900 100 90% /data\n/dev/sdb ext4 2000 500 1500 25% /my disk\n')
   assert.equal(rows.length, 2)
   assert.equal(rows[0].percent, 90)
-  assert.equal(rows[1].mount, '/meu disco')
+  assert.equal(rows[1].mount, '/my disk')
 })
 
 test('du: splits the total and sorts', () => {
@@ -61,4 +61,22 @@ test('safePath: rejects /proc, relative and missing paths', async () => {
   await assert.rejects(safePath('relativo'))
   await assert.rejects(safePath('/nao/existe/xyz'))
   assert.equal(await safePath('/tmp'), '/tmp')
+})
+
+import { getOverview, collectOverview } from '../lib/index.js'
+
+test('getOverview: callers within the sampling window share one snapshot', async () => {
+  const a = await getOverview()
+  const b = await getOverview()
+  assert.equal(a, b)
+})
+
+test('collectOverview: shape of the snapshot', async () => {
+  const o = await collectOverview()
+  assert.ok(o.cpu.count >= 1)
+  assert.ok(o.memory.total > 0)
+  assert.ok(Array.isArray(o.disks))
+  assert.ok(o.processes.total > 0)
+  assert.equal(typeof o.processes.unreadable, 'number')
+  assert.ok(o.processes.byMem.length > 0)
 })
