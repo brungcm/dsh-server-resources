@@ -1,0 +1,70 @@
+{
+  "name": "dsh-server-resources",
+  "version": "0.1.0",
+  "description": "Server resources panel for DeepSeek Harness: live CPU, RAM, swap and disk, with rankings of the top processes, folders and files. Read-only, zero dependencies.",
+  "author": "brungcm",
+  "license": "MIT",
+  "type": "module",
+  "keywords": [
+    "dsh",
+    "dsh-plugin",
+    "deepseek-harness",
+    "monitor",
+    "server",
+    "cpu",
+    "memory",
+    "swap",
+    "disk",
+    "sidebar"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/brungcm/dsh-server-resources.git"
+  },
+  "homepage": "https://github.com/brungcm/dsh-server-resources#readme",
+  "bugs": {
+    "url": "https://github.com/brungcm/dsh-server-resources/issues"
+  },
+  "main": "lib/index.js",
+  "exports": {
+    ".": "./lib/index.js",
+    "./client": "./lib/client.js",
+    "./cordis.patch.yml": "./cordis.patch.yml",
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "lib",
+    "cordis.patch.yml",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "test": "node --test test/*.test.mjs"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "os": [
+    "linux"
+  ],
+  "peerDependencies": {
+    "dsh-better-sidebar": ">=0.30.0"
+  },
+  "peerDependenciesMeta": {
+    "dsh-better-sidebar": {
+      "optional": false
+    }
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "dsh": {
+    "manifestVersion": 1,
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    },
+    "client": {
+      "platform": "web"
+    }
+  }
+}

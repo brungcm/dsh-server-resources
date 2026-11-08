@@ -1,0 +1,5 @@
+# Adds the "Resources" tab to the right sidebar (requires dsh-better-sidebar to be enabled).
+# Read-only: reads /proc and runs df/du/find under ionice idle + nice 19.
+- insert:
+    - id: server-resources
+      name: dsh-server-resources
