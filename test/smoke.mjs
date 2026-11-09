@@ -25,7 +25,9 @@ if (!(o.memory.used >= 0 && o.memory.used <= o.memory.total * 1.001)) fail('memo
 if (!(o.cpu.count >= 1)) fail('cpu.count')
 if (!(o.disks.length >= 1)) fail('no disks')
 for (const d of o.disks) if (!(d.total > 0 && d.percent >= 0 && d.percent <= 100.5)) fail('bad disk ' + JSON.stringify(d))
-if (!(o.processes.total >= 5)) fail('too few processes: ' + o.processes.total)
+// A container sees only its own processes (a handful); a real host has dozens.
+const min = process.env.DSR_MIN_PROCESSES ? Number(process.env.DSR_MIN_PROCESSES) : 5
+if (!(o.processes.total >= min)) fail('too few processes: ' + o.processes.total)
 if (!(o.processes.byMem[0].rss > 0)) fail('no RSS')
 if (!o.processes.byMem.some((p) => p.args && p.args.length)) fail('no command lines')
 if (o.platform === 'win32' && ms > 20000) fail('sample too slow: ' + ms)

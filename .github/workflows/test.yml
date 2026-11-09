@@ -55,6 +55,8 @@ jobs:
     name: smoke · Linux container
     runs-on: ubuntu-latest
     container: node:22
+    env:
+      DSR_MIN_PROCESSES: 1
     steps:
       - uses: actions/checkout@v4
       - run: node test/smoke.mjs

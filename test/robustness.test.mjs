@@ -92,7 +92,10 @@ test('safePath helpers: POSIX absolute paths and the deny list', (t) => {
 test('safePath: a forbidden root that EXISTS on this machine is refused (not merely missing)', async (t) => {
   if (isWin) return t.skip('POSIX only')
   await assert.rejects(safePath('/dev'), /not allowed/)
-  await assert.rejects(safePath('/dev/shm'), /not allowed/)
+  // /dev/shm exists on Linux only; /dev/fd exists on macOS. Test whichever child exists here.
+  const { existsSync } = await import('node:fs')
+  const child = ['/dev/shm', '/dev/fd'].find((p) => existsSync(p))
+  if (child) await assert.rejects(safePath(child), /not allowed/)
 })
 
 test('safePath: a symlink pointing into a forbidden tree is refused', async (t) => {
