@@ -10,6 +10,7 @@ import {
 import { walk, diskBytes } from '../lib/walker.js'
 import { encodePs, PS_SCRIPT } from '../lib/platform/win32.js'
 import { collectOverview, safePath } from '../lib/index.js'
+import { createCpuSampler } from '../lib/platform/shared.js'
 import { linux } from '../lib/platform/linux.js'
 
 const fx = (n) => readFileSync(new URL('./fixtures/' + n, import.meta.url), 'utf8')
@@ -239,4 +240,25 @@ test('contract: safePath accepts the platform root and rejects relative / missin
 test('contract: the Linux collector is only exposed on Linux (others are covered by fixtures)', () => {
   assert.equal(linux.id, 'linux')
   assert.equal(linux.capabilities.pressure, true)
+})
+
+// ───────── CPU sampler (macOS and Windows) ─────────
+
+test('cpu sampler: first call is 0, later calls are bounded deltas with one value per core', async () => {
+  const sample = createCpuSampler()
+  const first = sample()
+  assert.equal(first.percent, 0)
+  assert.ok(first.cores.every((c) => c === 0))
+  const t = Date.now()
+  while (Date.now() - t < 300) Math.sqrt(Math.random()) // burn a little CPU so there is a delta
+  const second = sample()
+  assert.ok(second.percent >= 0 && second.percent <= 100)
+  assert.equal(second.cores.length, first.cores.length)
+  assert.ok(second.cores.every((c) => c >= 0 && c <= 100))
+})
+
+test('win: the Idle pseudo-process (pid 0) is not a CPU consumer', async () => {
+  const { win32 } = await import('../lib/platform/win32.js')
+  assert.equal(typeof win32.sample, 'function')
+  assert.equal(win32.capabilities.perCoreCpu, true)
 })

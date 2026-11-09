@@ -1,7 +1,7 @@
 {
   "name": "dsh-server-resources",
-  "version": "0.2.0",
-  "description": "Server resources panel for DeepSeek Harness: live CPU, RAM, swap and disk, with rankings of the top processes, folders and files. Read-only, zero dependencies.",
+  "version": "0.3.0",
+  "description": "Resources panel for DeepSeek Harness on Linux, macOS and Windows: live CPU, RAM, swap and disk, with rankings of the top processes, folders and files. Read-only, zero dependencies.",
   "author": "brungcm",
   "license": "MIT",
   "type": "module",
@@ -15,7 +15,10 @@
     "memory",
     "swap",
     "disk",
-    "sidebar"
+    "sidebar",
+    "linux",
+    "macos",
+    "windows"
   ],
   "repository": {
     "type": "git",
@@ -37,7 +40,9 @@
     "cordis.patch.yml",
     "README.md",
     "LICENSE",
-    "docs/images"
+    "CHANGELOG.md",
+    "docs/PLATFORMS.md",
+    "docs/ARCHITECTURE.md"
   ],
   "scripts": {
     "test": "node test/run.mjs",
@@ -47,7 +52,9 @@
     "node": ">=20"
   },
   "os": [
-    "linux"
+    "linux",
+    "darwin",
+    "win32"
   ],
   "peerDependencies": {
     "dsh-better-sidebar": ">=0.30.0"

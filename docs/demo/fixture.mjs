@@ -48,9 +48,9 @@ const clone = (o) => JSON.parse(JSON.stringify(o))
 export const overviewMac = (() => {
   const o = clone(overview)
   o.platform = 'darwin'
-  o.capabilities = { perCoreCpu: false, ioWait: false, steal: false, pressure: false, swapPerProcess: false, cache: true, commandLine: true }
+  o.capabilities = { perCoreCpu: true, ioWait: false, steal: false, pressure: false, swapPerProcess: false, cache: true, commandLine: true }
   o.host = { name: 'demo-macbook', kernel: 'Darwin 25.0', uptime: 6 * 86400 + 3 * 3600 }
-  o.cpu = { percent: 27, cores: [], iowait: 0, steal: 0, count: 10, load: [3.1, 2.8, 2.4], model: 'Apple M-series' }
+  o.cpu = { percent: 27, cores: [44, 38, 31, 29, 24, 22, 18, 12, 9, 6], iowait: 0, steal: 0, count: 10, load: [3.1, 2.8, 2.4], model: 'Apple M-series' }
   o.memory = { total: 24 * GB, available: 7.4 * GB, used: 16.6 * GB, cache: 6.2 * GB, free: 0.3 * GB, shmem: 0, compressed: 2.9 * GB, wired: 3.4 * GB, swapTotal: 0, swapUsed: 0 }
   o.disks = [{ device: '/dev/disk3s1s1', fstype: 'apfs', mount: '/', total: 994 * GB, used: 612 * GB, avail: 382 * GB, percent: 61.6 }]
   o.processes.groupsByCpu = [
@@ -66,9 +66,9 @@ export const overviewMac = (() => {
 export const overviewWin = (() => {
   const o = clone(overview)
   o.platform = 'win32'
-  o.capabilities = { perCoreCpu: false, ioWait: false, steal: false, pressure: false, swapPerProcess: true, cache: false, commandLine: true }
+  o.capabilities = { perCoreCpu: true, ioWait: false, steal: false, pressure: false, swapPerProcess: true, cache: false, commandLine: true }
   o.host = { name: 'DEMO-PC', kernel: '10.0.26100', uptime: 3 * 86400 + 9 * 3600 }
-  o.cpu = { percent: 44, cores: [], iowait: 0, steal: 0, count: 16, load: [0, 0, 0], model: 'Demo Ryzen 7' }
+  o.cpu = { percent: 44, cores: [71, 66, 58, 52, 47, 44, 40, 37, 33, 31, 28, 25, 22, 18, 15, 11], iowait: 0, steal: 0, count: 16, load: [0, 0, 0], model: 'Demo Ryzen 7' }
   o.memory = { total: 32 * GB, available: 11.2 * GB, used: 20.8 * GB, cache: 0, free: 11.2 * GB, shmem: 0, swapTotal: 8 * GB, swapUsed: 2.6 * GB }
   o.disks = [
     { device: 'C:', fstype: 'NTFS', mount: 'C:\\', label: 'Windows', total: 953 * GB, used: 702 * GB, avail: 251 * GB, percent: 73.7 },

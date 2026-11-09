@@ -1,5 +1,5 @@
 # Adds the "Resources" tab to the right sidebar (requires dsh-better-sidebar to be enabled).
-# Read-only: reads /proc and runs df/du/find under ionice idle + nice 19.
+# Read-only. Linux reads /proc; macOS runs sysctl/vm_stat/ps; Windows runs one PowerShell/CIM query.
 - insert:
     - id: server-resources
       name: dsh-server-resources
