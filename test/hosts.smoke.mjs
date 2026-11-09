@@ -1,6 +1,6 @@
 // Real-host check of the parts the unit tests cannot cover: the portable walker and safePath on the real filesystem.
 import { walk } from '../lib/walker.js'
-import { safePath } from '../lib/index.js'
+import { safePath, apply } from '../lib/index.js'
 import { tmpdir, homedir } from 'node:os'
 
 const fail = (m) => { console.error('HOST CHECK FAIL:', m); process.exit(1) }
@@ -28,6 +28,17 @@ if (process.platform !== 'linux') {
   const b = await safePath(tmpdir().toUpperCase())
   console.log('case-insensitive paths agree:', a.toLowerCase() === b.toLowerCase(), '|', a, '|', b)
   if (a.toLowerCase() !== b.toLowerCase()) fail('case-insensitive paths differ')
+}
+// The scan the panel really runs on this OS (du on Linux/macOS, the walker on Windows), through the real routes.
+const routes = {}
+apply({ connection: { fetch: { register: (r) => { routes[r.path] = r.fetch; return async () => {} } } }, effect: (f) => f() })
+for (const kind of ['dirs', 'files']) {
+  const t0 = Date.now()
+  const res = await routes['/api/dsh-server-resources/disk/' + kind](new Request('http://x/?path=' + encodeURIComponent(home) + '&minMb=20&fresh=1'))
+  const body = await res.json()
+  console.log(`route disk/${kind} (${process.platform}): HTTP ${res.status}, ${Date.now() - t0} ms, rows=${body.value?.rows?.length}, partial=${body.value?.partial}, skipped=${body.value?.skipped ?? 0}`)
+  if (res.status !== 200 || !body.ok) fail('route ' + kind + ': ' + JSON.stringify(body))
+  if (kind === 'dirs' && !(body.value.total > 0)) fail('empty total')
 }
 // A drive/volume root must never be rejected as a pseudo filesystem.
 const rootOk = await safePath(root).then(() => true, () => false)
