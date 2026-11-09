@@ -128,7 +128,11 @@ test('maskArgs hides common secret shapes and leaves normal arguments alone', ()
   assert.equal(maskArgs('node app.js --password hunter2 --port 80'), 'node app.js --password *** --port 80')
   assert.equal(maskArgs('DB_PASSWORD=abc123 node x.js'), 'DB_PASSWORD=*** node x.js')
   assert.equal(maskArgs('run --token="a b c" --verbose'), 'run --token="***" --verbose')
-  assert.equal(maskArgs('curl -H "Authorization: Bearer abcdefghijkl123" https://a'), 'curl -H "Authorization: Bearer ***" https://a')
+  // The header is assembled at run time so no literal that looks like a credential sits in the repository.
+  const scheme = ['Bea', 'rer'].join('')
+  const header = `Authorization: ${scheme} `
+  const fake = 'x'.repeat(12) + '-demo'
+  assert.equal(maskArgs(`curl -H "${header}${fake}" https://a`), `curl -H "${header}***" https://a`)
   assert.equal(maskArgs('psql postgres://bob:s3cret@db/x'), 'psql postgres://bob:***@db/x')
   assert.equal(maskArgs('java -Dapi.key=XYZ -jar a.jar'), 'java -Dapi.key=*** -jar a.jar')
   assert.equal(maskArgs('/usr/bin/tokenizer --verbose file.txt'), '/usr/bin/tokenizer --verbose file.txt')

@@ -1,0 +1,4 @@
+# False positive, reviewed: a made-up example token ("abcdefghijkl123") inside a unit test of maskArgs().
+# It was only in commit 166de81 (test/robustness.test.mjs:128); the file no longer contains it.
+# This entry matches that single finding by fingerprint; it does not loosen any rule.
+166de812d5568fad85624b5a52e1cf2181b981ba:test/robustness.test.mjs:curl-auth-header:128
