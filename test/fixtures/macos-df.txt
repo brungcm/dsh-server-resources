@@ -1,0 +1,13 @@
+Filesystem     1024-blocks      Used Available Capacity  Mounted on
+/dev/disk2s1s1   335032320  12348376 102252616    11%    /
+devfs                  197       197         0   100%    /dev
+/dev/disk2s6     335032320        20 102252616     1%    /System/Volumes/VM
+/dev/disk2s2     335032320   7406540 102252616     7%    /System/Volumes/Preboot
+/dev/disk2s4     335032320     35520 102252616     1%    /System/Volumes/Update
+/dev/disk1s2        512000        20    506764     1%    /System/Volumes/xarts
+/dev/disk1s1        512000       116    506764     1%    /System/Volumes/iSCPreboot
+/dev/disk1s3        512000       240    506764     1%    /System/Volumes/Hardware
+/dev/disk2s5     335032320 211617644 102252616    68%    /System/Volumes/Data
+/dev/disk4s1        532480    507980     21708    96%    /System/Library/AssetsV2/com_apple_MobileAsset_UAF_Siri_Understanding/purpose_auto/c10eb90af2d4996616c3cd0f6bac0833eb4925fa.asset/.AssetData
+/dev/disk6s1          6144      2332      3468    41%    /System/Library/AssetsV2/com_apple_MobileAsset_PKITrustStore/purpose_auto/d1b36c40ecf011c1a2dfeacc93215881ad4cf525.asset/.AssetData
+map auto_home            0         0         0   100%    /System/Volumes/Data/home
