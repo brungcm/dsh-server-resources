@@ -1,0 +1,55 @@
+name: probe
+on:
+  workflow_dispatch:
+  push:
+    branches: [platforms]
+    paths: [.github/workflows/probe.yml]
+jobs:
+  mac:
+    strategy:
+      matrix:
+        os: [macos-latest, macos-13]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - run: |
+          echo "### uname"; uname -a; sw_vers; sysctl -n hw.ncpu hw.memsize hw.pagesize hw.model machdep.cpu.brand_string || true
+          echo "### vm_stat"; vm_stat
+          echo "### swapusage"; sysctl -n vm.swapusage
+          echo "### loadavg"; sysctl -n vm.loadavg
+          echo "### ps comm"; ps -axo pid=,ppid=,user=,pcpu=,rss=,comm= | head -12
+          echo "### ps command"; ps -axo pid=,command= | head -8
+          echo "### ps -ww"; ps -wwaxo pid=,etime=,command= | head -3
+          echo "### df -k"; df -k -P
+          echo "### df -kP -T?"; df -kP -T nofs 2>&1 | head -3 || true
+          echo "### du -d1"; du -x -k -d 1 /usr 2>&1 | tail -6
+          echo "### mount"; mount | head -8
+          echo "### node"; node -v
+          echo "### node os.cpus/loadavg/freemem"; node -e "const os=require('os');console.log(os.cpus().length,os.cpus()[0].model,os.loadavg(),os.freemem(),os.totalmem())"
+  win:
+    runs-on: windows-latest
+    steps:
+      - shell: pwsh
+        run: |
+          $PSVersionTable.PSVersion.ToString()
+          "### Win32_Process"
+          Measure-Command { $p = Get-CimInstance Win32_Process | Select-Object ProcessId,Name,CommandLine,WorkingSetSize,PageFileUsage,KernelModeTime,UserModeTime,CreationDate } | Select-Object TotalMilliseconds | Format-List
+          $p | Select-Object -First 4 | ConvertTo-Json -Compress
+          "count: $($p.Count)"
+          "### Win32_OperatingSystem"
+          Get-CimInstance Win32_OperatingSystem | Select-Object TotalVisibleMemorySize,FreePhysicalMemory,TotalVirtualMemorySize,FreeVirtualMemory,LastBootUpTime | ConvertTo-Json -Compress
+          "### Win32_PageFileUsage"
+          Get-CimInstance Win32_PageFileUsage | Select-Object Name,AllocatedBaseSize,CurrentUsage,PeakUsage | ConvertTo-Json -Compress
+          "### Win32_LogicalDisk"
+          Get-CimInstance Win32_LogicalDisk | Select-Object DeviceID,DriveType,FileSystem,Size,FreeSpace,VolumeName | ConvertTo-Json -Compress
+          "### Win32_Processor"
+          Get-CimInstance Win32_Processor | Select-Object Name,NumberOfCores,NumberOfLogicalProcessors,LoadPercentage | ConvertTo-Json -Compress
+          "### Get-Process timing"
+          Measure-Command { Get-Process | Select-Object Id,ProcessName,CPU,WorkingSet64 | Out-Null } | Select-Object TotalMilliseconds | Format-List
+          "### windows powershell 5.1?"
+          powershell.exe -NoProfile -NonInteractive -Command '$PSVersionTable.PSVersion.ToString()'
+          Measure-Command { powershell.exe -NoProfile -NonInteractive -Command 'Get-CimInstance Win32_Process | Select-Object ProcessId,Name,CommandLine,WorkingSetSize,KernelModeTime,UserModeTime,CreationDate | ConvertTo-Json -Compress | Out-Null' } | Select-Object TotalMilliseconds | Format-List
+          "### node"
+          node -e "const os=require('os');console.log(os.cpus().length,os.cpus()[0].model,os.loadavg(),os.freemem(),os.totalmem(),os.platform(),os.release())"
+          node -e "require('fs').statfs('C:\\\\',(e,s)=>console.log(e?e.message:JSON.stringify({bsize:s.bsize,blocks:s.blocks,bavail:s.bavail})))"
+          "### cmd where"
+          where.exe powershell pwsh
