@@ -1,5 +1,6 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
+import { realpath } from 'node:fs/promises'
 import { parseCpuLine, cpuPercent, parseMeminfo, parsePressure, parsePidStat, parseDf, parseDu, parseFind, groupProcesses, safePath } from '../lib/index.js'
 
 test('cpu: percentage between two readings', () => {
@@ -56,18 +57,21 @@ test('groups processes by command', () => {
   assert.equal(x.count, 2); assert.equal(x.rss, 30); assert.equal(x.swap, 5)
 })
 
-test('safePath: rejects /proc, relative and missing paths', async () => {
-  await assert.rejects(safePath('/proc'))
+test('safePath: rejects relative and missing paths; blocks pseudo filesystems on POSIX', async () => {
   await assert.rejects(safePath('relativo'))
   await assert.rejects(safePath('/nao/existe/xyz'))
-  assert.equal(await safePath('/tmp'), '/tmp')
+  if (process.platform !== 'win32') {
+    await assert.rejects(safePath('/proc'))
+    // /tmp is a symlink to /private/tmp on macOS: safePath returns the real path, so compare real paths.
+    assert.equal(await safePath('/tmp'), await realpath('/tmp'))
+  }
 })
 
 import { getOverview, collectOverview } from '../lib/index.js'
 
 test('getOverview: callers within the sampling window share one snapshot', async () => {
   const a = await getOverview()
-  const b = await getOverview()
+  const b = await getOverview(a.sampledAt + 10) // 10 ms later: always inside the reuse window
   assert.equal(a, b)
 })
 
