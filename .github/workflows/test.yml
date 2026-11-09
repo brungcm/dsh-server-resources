@@ -36,3 +36,25 @@ jobs:
           node-version: 22
       - run: node test/smoke.mjs
       - run: node test/hosts.smoke.mjs
+  # Windows PowerShell 5.1 is the only shell on most Windows machines (the runner also has pwsh 7, which the
+  # collector prefers). Force the fallback so the 5.1 code path is exercised too.
+  smoke-ps51:
+    name: smoke · Windows PowerShell 5.1
+    runs-on: windows-latest
+    env:
+      DSR_SHELL: powershell
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: node test/smoke.mjs
+      - run: node test/hosts.smoke.mjs
+  # A container has an overlay '/', which the Linux collector used to filter out, leaving the panel with no disks.
+  smoke-container:
+    name: smoke · Linux container
+    runs-on: ubuntu-latest
+    container: node:22
+    steps:
+      - uses: actions/checkout@v4
+      - run: node test/smoke.mjs

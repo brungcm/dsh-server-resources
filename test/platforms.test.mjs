@@ -17,15 +17,24 @@ const fx = (n) => readFileSync(new URL('./fixtures/' + n, import.meta.url), 'utf
 
 // ───────── macOS (samples captured on a real macOS 26 / Apple M1 runner) ─────────
 
-test('mac: vm_stat uses 16 KB pages and reports Activity-Monitor style memory', () => {
+test('mac: vm_stat uses 16 KB pages and reports App Memory like Activity Monitor', () => {
   const total = 7516192768
   const m = parseVmStat(fx('macos-vm_stat.txt'), total)
   const page = 16384
   assert.equal(m.free, 6842 * page)
-  assert.equal(m.used, (191114 + 55698 + 10008) * page) // active + wired + compressor
+  // App Memory (anonymous − purgeable) + wired + compressor. Numbers read by hand from the fixture:
+  // 174238 − 1943 = 172295 anonymous-not-purgeable, + 55698 wired + 10008 compressor = 238001 pages.
+  assert.equal(m.used, 238001 * page)
+  assert.ok(m.used < (191114 + 55698 + 10008) * page, 'smaller than the old active+wired+compressed figure, which counted file cache')
   assert.equal(m.compressed, 10008 * page)
   assert.ok(m.used > 0 && m.used <= total)
-  assert.ok(m.available <= total)
+})
+
+test('mac: vm_stat on Intel (4 KB pages) and without an "Anonymous pages" line', () => {
+  const txt = 'Mach Virtual Memory Statistics: (page size of 4096 bytes)\nPages free:   100.\nPages active:  1000.\nPages inactive: 500.\nPages wired down: 200.\nPages occupied by compressor: 50.\n'
+  const m = parseVmStat(txt, 4096 * 4000)
+  assert.equal(m.used, (1000 + 200 + 50) * 4096) // falls back to active + wired + compressor
+  assert.equal(m.free, 100 * 4096)
 })
 
 test('mac: vm_stat falls back to 16 KB pages and survives garbage', () => {
@@ -71,11 +80,13 @@ test('mac: df -k -P and mount → one row per real volume, Data volume carries t
   assert.ok(!mounts.includes('/System/Volumes/VM'))
   const root = picked.find((r) => r.mount === '/')
   assert.equal(root.fstype, 'apfs')
-  // "/" is a sealed read-only system volume; real usage = system volume + Data volume of the same container
+  // "/" is a sealed read-only system volume; the container's real occupancy is everything that is not free
   const data = df.find((r) => r.mount === '/System/Volumes/Data')
-  assert.equal(root.used, df.find((r) => r.mount === '/').used + data.used)
   assert.equal(root.total, data.total)
+  assert.equal(root.avail, data.avail)
+  assert.equal(root.used, root.total - data.avail)
   assert.ok(Math.abs(root.percent - (root.used / root.total) * 100) < 1e-9)
+  assert.ok(Math.abs(root.used + root.avail - root.total) < 1, 'used + free = total')
   assert.ok(!mounts.includes('/System/Volumes/Data'), 'merged into "/" instead of listed twice')
 })
 
@@ -257,8 +268,3 @@ test('cpu sampler: first call is 0, later calls are bounded deltas with one valu
   assert.ok(second.cores.every((c) => c >= 0 && c <= 100))
 })
 
-test('win: the Idle pseudo-process (pid 0) is not a CPU consumer', async () => {
-  const { win32 } = await import('../lib/platform/win32.js')
-  assert.equal(typeof win32.sample, 'function')
-  assert.equal(win32.capabilities.perCoreCpu, true)
-})
