@@ -35,3 +35,4 @@ jobs:
         with:
           node-version: 22
       - run: node test/smoke.mjs
+      - run: node test/hosts.smoke.mjs
