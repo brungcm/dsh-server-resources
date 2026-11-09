@@ -56,7 +56,8 @@ The UI reads these flags and **omits** what is `false`. A host from a 0.2.x rele
 
 - Linux: `ionice -c3 nice -n19 du -x -B1 --max-depth=1` and `find -xdev -type f -size +N -printf`. About 3× faster
   than any Node walker.
-- macOS/Windows: `walker.js`. It uses `opendir` + `lstat`, never follows symlinks/junctions, stays on the starting
+- macOS: BSD `du -d 1` and `find … -exec stat`, plus a shallow `readdir` for loose files.
+- Windows: `walker.js`. It uses `opendir` + `lstat`, never follows symlinks/junctions, stays on the starting
   device, counts allocated blocks where the OS reports them, yields every 400 entries, and stops at a deadline or
   an entry budget with `partial: true`.
 - One scan runs at a time (a promise chain), at most 4 may wait, results are cached for 5 minutes, and an
@@ -65,8 +66,14 @@ The UI reads these flags and **omits** what is `false`. A host from a 0.2.x rele
 ## Security boundaries
 
 1. **Commands** are started with `spawn(cmd, argv)`; there is no shell and no string is concatenated into a command.
+   `run()` always settles by its timeout (a process stuck in uninterruptible I/O, e.g. `df` on a dead NFS mount, would
+   otherwise never emit `close`), forces `LC_ALL=C`, and the whole collection is capped at 30 s.
 2. **PowerShell** receives a constant script via `-EncodedCommand`.
 3. **Paths** from the browser pass `safePath`: absolute, `realpath`-resolved, an existing directory, not under a
    pseudo filesystem. The walker re-checks symlinks with `lstat` on every entry.
 4. **Auth** is DSH's: routes are registered on the connection layer and answer only the signed-in owner.
-5. **Output** includes full process command lines (see the README heads-up).
+5. **Output** includes process command lines, masked best-effort by `maskArgs`; `DSR_HIDE_COMMAND_LINES=1` removes them
+   (and clears the `commandLine` capability so the UI hides the column).
+6. **Windows paths**: drive letters only; UNC and `\\?\` are refused (a slow `realpath` on an unreachable share would
+   block a libuv thread-pool slot of the whole DSH server and could trigger NTLM to an arbitrary host).
+7. **Busy**: more than four scans waiting → HTTP 429.

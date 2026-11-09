@@ -107,19 +107,20 @@ The bundle patch it applies is [`cordis.patch.yml`](cordis.patch.yml): one `inse
 
 - **Read-only.** It never kills a process, deletes a file or changes a setting.
 - **No dependencies, no network.** Linux reads `/proc`; macOS runs `sysctl`/`vm_stat`/`ps`/`df`; Windows runs **one** PowerShell script that only calls `Get-CimInstance`. Commands are started with a fixed argument list (never a shell string), and the PowerShell script is sent with `-EncodedCommand`, so nothing from the browser is ever interpolated into it.
-- **Gentle on the machine.** Linux disk scans run under `ionice -c3 nice -n19`; macOS and Windows use a built-in walker that yields to the event loop. All scans run one at a time, with a 150 s limit, a 5 min cache and at most 4 queued. The overview is sampled at most once per second (more slowly on Windows) however many tabs are open, and polling stops while the tab is hidden.
-- **Guarded paths.** `/proc`, `/sys`, `/dev` and `/run` cannot be scanned on Linux/macOS; every path goes through `realpath` and must be an existing directory; the walker never follows symlinks or junctions and never leaves the volume it started on.
+- **Gentle on the machine.** Linux and macOS disk scans run at the lowest priority (`ionice -c3 nice -n19` / `nice -n19`); Windows uses a built-in walker that yields to the event loop. All scans run one at a time, with a 150 s limit, a 5 min cache and at most 4 queued (the rest get HTTP 429). The overview is sampled at most once per second (more slowly on Windows) however many tabs are open, every command has a hard timeout so a dead network mount cannot hang the panel, and polling stops while the tab is hidden.
+- **Guarded paths.** `/proc`, `/sys`, `/dev` and `/run` cannot be scanned on Linux/macOS; on Windows only drive-letter paths (`C:\…`) are accepted — UNC and `\\?\` paths are refused; every path goes through `realpath` and must be an existing directory; the walker never follows symlinks or junctions, never leaves the volume it started on and counts a hard link once.
 - **Behind DSH's own auth.** The routes are served through DSH's connection layer and are only reachable by the signed-in owner.
 
-> **Heads-up:** the Processes tab shows each process's **full command line**, which on some systems contains secrets passed as arguments. That is the same information any local user can read with `ps`, `Get-CimInstance` or Task Manager. Do not expose your DSH instance publicly without authentication.
+> **Heads-up — command lines.** The Processes tab shows each process's command line, which can contain secrets passed as arguments. Obvious shapes are masked (`--password …`, `TOKEN=…`, `Bearer …`, `user:pass@host`), but masking is best-effort: a secret passed as a bare positional argument cannot be recognised. Set `DSR_HIDE_COMMAND_LINES=1` in the environment of the DSH server to hide command lines entirely. It is the same information any local user can read with `ps`, `Get-CimInstance` or Task Manager; do not expose your DSH instance publicly without authentication.
 
 ## Limitations
 
 - **Numbers describe the host** DSH runs on; container (cgroup) limits are not shown.
 - **macOS:** per-process CPU is macOS's own decaying average (it lags a sudden spike); swap is "none" until macOS actually needs it; no per-process swap.
-- **Windows:** one sample takes ~1–2 s (PowerShell + CIM), so the panel refreshes every few seconds instead of 2.5 s; "System Idle Process" is left out of the CPU ranking; processes of other users are listed but may lack a command line without administrator rights.
+- **Windows:** one sample takes ~1–2 s (PowerShell + CIM), so the panel refreshes every few seconds instead of 2.5 s; "System Idle Process" is left out of the CPU ranking; processes of other users are listed but may lack a command line without administrator rights. Antivirus/EDR products sometimes flag any repeated `powershell -EncodedCommand`; the plugin avoids `-ExecutionPolicy Bypass` and starts PowerShell by absolute path to look as ordinary as possible, but if your policy blocks it the panel says so instead of showing zeros.
+- **Unreadable folders:** on macOS (Full Disk Access / TCC) and Windows (protected system folders) some folders cannot be read without elevated rights; the Disk tab counts them ("N folders could not be read") instead of silently under-reporting.
 - If `/proc` is mounted with `hidepid` (Linux), processes of other users are not readable; the tab shows how many were skipped.
-- Disk scans of very large trees stop after 2.5 min and return a partial result (clearly marked). The macOS/Windows walker is ~3× slower than Linux's `du`.
+- Disk scans of very large trees stop after 2.5 min and return a partial result (clearly marked). On Windows the built-in walker is ~5–15× slower than `du` (a 5 GB tree takes a few seconds).
 - Not supported: BSDs, Android, 32-bit Windows. On those the tab shows a clear "unsupported platform" message.
 
 ## How it works
@@ -138,7 +139,7 @@ Every collector returns the same snapshot shape plus a `capabilities` map; the U
 ## Development
 
 ```sh
-npm test            # 33 unit tests, nothing to install (parsers are tested against real macOS and Windows output)
+npm test            # ~70 tests, nothing to install (parsers are tested against real macOS and Windows output)
 npm run smoke       # run the real collectors on THIS machine and print what the panel would show
 PW_FROM=<dir-with-playwright-core>/ node docs/demo/render.mjs <chrome> <react.iife.js>   # regenerate screenshots
 ```

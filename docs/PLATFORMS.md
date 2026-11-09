@@ -17,19 +17,20 @@ parsers are tested against are real captures in [`test/fixtures`](../test/fixtur
 | Disks | `df -P -B1 -T` | `df -k -P` + `mount` | `Win32_LogicalDisk` (fixed drives) |
 | Processes (CPU, RAM, command line) | `/proc/<pid>/{stat,statm,status,cmdline}` | `ps -axo …` + `ps -axww -o pid=,command=` | `Win32_Process` |
 | Per-process swap | `VmSwap` | — | `PageFileUsage` (private committed memory) |
-| Largest folders / files | `ionice -c3 nice -n19 du / find` | `lib/walker.js` | `lib/walker.js` |
+| Largest folders / files | `ionice -c3 nice -n19 du -a / find` | `nice -n19 du -d 1` + `find … -exec stat` | `lib/walker.js` (pure Node) |
 
 ## macOS
 
-- **Memory used** follows Activity Monitor: *app + wired + compressed* pages — not `total − free`, which sits near 100%
-  because macOS keeps spare RAM as cache. *Available* = free + inactive + speculative + purgeable pages. The page size
+- **Memory used** follows Activity Monitor's *Memory Used*: *App Memory* (anonymous pages − purgeable) + wired + compressed — not `total − free`, which sits near 100% because macOS keeps spare RAM as file cache, and not `active + wired`, which counts that cache. *Available* = free + inactive + speculative + purgeable pages. The page size
   is read from the `vm_stat` header (16 KB on Apple silicon, 4 KB on Intel).
 - **Swap** is a pool the OS grows on demand; `vm.swapusage` reads `total = 0.00M` until memory pressure forces it.
   The panel says "none in use (managed by macOS)" instead of a misleading 0%.
 - **Disks.** One APFS container is exposed as several volumes that all report the same capacity. The sealed read-only
   system volume `/` is shown with the usage of the `/System/Volumes/Data` volume added (that is the space you can
-  actually fill); the internal helper volumes (`/System/Volumes/VM`, `Preboot`, asset images, `devfs`, `auto_home`)
+  actually fill; `used = total − free`, so used + free always equals the container size); mounted read-only disk
+  images (installer DMGs sit at 100%) are skipped; the internal helper volumes (`/System/Volumes/VM`, `Preboot`, asset images, `devfs`, `auto_home`)
   are hidden.
+- **Disk scans** use BSD `du -x -k -d 1 -P` and `find … -exec stat -f '%b|%m|%N'` (≈25× faster than walking in Node: 11 s vs minutes for a home folder on a runner). BSD `du` cannot list files with `-d`, so loose files in the scanned folder come from a shallow `readdir`. Folders protected by TCC need *Full Disk Access* for the process running DSH.
 - **Process CPU** is `ps %cpu`, which macOS computes as a decaying average over the process lifetime — it lags a
   sudden spike. Overall and per-core CPU use real deltas of `os.cpus()`, so they react immediately.
 - Process names come from the executable path; names with spaces (`Google Chrome Helper (Renderer)`) are kept whole.
@@ -40,7 +41,13 @@ parsers are tested against are real captures in [`test/fixtures`](../test/fixtur
   when present — ≈125 ms to read the process table vs ≈1.9 s in Windows PowerShell 5.1 on a GitHub runner —
   otherwise `powershell.exe`, which exists on every Windows.
 - **No injection surface.** The script is a constant; it is passed with `-EncodedCommand` (UTF-16LE base64).
-  Nothing from the browser reaches it.
+  Nothing from the browser reaches it. There is no `-ExecutionPolicy` flag (it only affects .ps1 files).
+- **Absolute path.** `pwsh.exe` is looked up under `%ProgramFiles%\PowerShell\7`, `powershell.exe` under
+  `%SystemRoot%\System32\WindowsPowerShell\v1.0`. A bare name would be resolved by libuv in the current directory first.
+- **Encoding and dates.** The script switches stdout to UTF-8 (otherwise accented process names and volume labels
+  arrive garbled from the OEM code page), converts dates to ISO-8601 (Windows PowerShell 5.1 would otherwise emit
+  `\/Date(ms)\/`) and returns its own clock, which is used for the CPU delta (the CIM snapshot is taken 0.1–2 s
+  after PowerShell starts). `DSR_SHELL=powershell` forces the 5.1 fallback (CI tests both).
 - **Units.** `TotalVisibleMemorySize` and `FreePhysicalMemory` are KB, page file sizes are MB, `WorkingSetSize` is
   bytes, `PageFileUsage` (per process) is KB, `KernelModeTime`/`UserModeTime` are 100 ns ticks.
   `ConvertTo-Json` emits an *object* for one row and an *array* for several; the parsers accept both.

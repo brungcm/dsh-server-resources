@@ -226,3 +226,22 @@ test('walker: the entry budget turns into a partial result', async () => {
     rmSync(root, { recursive: true, force: true })
   }
 })
+
+// ───────── macOS disk scans use BSD du / find+stat ─────────
+
+import { parseStatLines, parseDu as parseDuUnit } from '../lib/parsers.js'
+
+test('mac scan: `stat -f %b|%m|%N` lines, with spaces and a pipe inside the file name', () => {
+  const rows = parseStatLines('3912|1794221499|/tmp/dtest/with space/y z.bin\n5864|1794221499|/tmp/a|b.bin\nnot a line\n|1|/x\n')
+  assert.equal(rows.length, 2)
+  assert.equal(rows[0].path, '/tmp/a|b.bin') // pipe in the NAME is kept: only the first two separators split
+  assert.equal(rows[0].bytes, 5864 * 512)
+  assert.equal(rows[0].mtime, 1794221499 * 1000)
+  assert.equal(rows[1].path, '/tmp/dtest/with space/y z.bin')
+})
+
+test('mac scan: BSD du prints KB (unit 1024) and the folder total is kept', () => {
+  const { total, rows } = parseDuUnit('1956\t/tmp/dtest/with space\n980\t/tmp/dtest/sub\n5868\t/tmp/dtest\n', '/tmp/dtest', 1024)
+  assert.equal(total, 5868 * 1024)
+  assert.deepEqual(rows.map((r) => r.bytes), [1956 * 1024, 980 * 1024])
+})
